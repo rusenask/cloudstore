@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 
 	"google.golang.org/api/option"
 
-	log "github.com/sirupsen/logrus"
-
 	gstorage "cloud.google.com/go/storage"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type GoogleCloudStorage struct {
@@ -49,20 +48,31 @@ func (gcs *GoogleCloudStorage) Setup() error {
 
 	bkt := client.Bucket(bktName)
 
-	attrs := &gstorage.BucketAttrs{Location: location}
-	err = bkt.Create(ctx, projectID, attrs)
-	if err == nil {
-		log.Printf("Created Google Cloud Storage bucket %s in %s",
-			bktName, location)
-	}
-
+	attrs, err := bkt.Attrs(ctx)
 	if err != nil {
-		if !strings.Contains(err.Error(), "You already own this bucket") {
-			return err
-		}
-
-		log.Printf("Using existing Google Cloud Storage bucket %v", bktName)
+		log.WithFields(log.Fields{
+			"error":       err,
+			"bucket_name": bktName,
+		}).Error("failed to access bucket")
+		return err
 	}
+	log.Infof("bucket %s, created at %s, is located in %s with storage class %s\n",
+		attrs.Name, attrs.Created, attrs.Location, attrs.StorageClass)
+
+	// attrs := &gstorage.BucketAttrs{Location: location}
+	// err = bkt.Create(ctx, projectID, attrs)
+	// if err == nil {
+	// 	log.Printf("Created Google Cloud Storage bucket %s in %s",
+	// 		bktName, location)
+	// }
+
+	// if err != nil {
+	// 	if !strings.Contains(err.Error(), "You already own this bucket") {
+	// 		return err
+	// 	}
+
+	// 	log.Printf("Using existing Google Cloud Storage bucket %v", bktName)
+	// }
 
 	gcs.bucket = bkt
 
