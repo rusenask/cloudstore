@@ -1,0 +1,36 @@
+syntax = "proto3";
+option go_package = "github.com/rusenask/cloudstore";
+package cloudstore;
+
+message Chunk {
+  bytes content = 1;
+}
+
+message UploadResponse {
+  string message = 1;  
+  string url  = 2;
+  UploadStatusCode code = 3;
+}
+
+enum UploadStatusCode {
+  unknown = 0;
+  ok = 1;
+  failed = 2;
+}
+
+message GetRequest {
+  string filename = 1;
+}
+
+message DeleteRequest {
+  string filename = 1;
+}
+
+message DeleteResponse {
+  string filename = 1;
+}
+
+service CloudStorageService {  
+  rpc Store(stream Chunk) returns (UploadResponse) {}  
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+}

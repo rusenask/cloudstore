@@ -1,0 +1,7 @@
+steps:
+- name: gcr.io/cloud-builders/git
+  args: [fetch, --depth=100]
+- name: gcr.io/cloud-builders/docker
+  args: ["build", "--tag", "gcr.io/webhookrelay/cloudstore:$TAG_NAME", "."]
+
+images: ['gcr.io/webhookrelay/cloudstore:$TAG_NAME']
