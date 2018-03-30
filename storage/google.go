@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 
 	"google.golang.org/api/option"
@@ -59,21 +60,6 @@ func (gcs *GoogleCloudStorage) Setup() error {
 	log.Infof("bucket %s, created at %s, is located in %s with storage class %s\n",
 		attrs.Name, attrs.Created, attrs.Location, attrs.StorageClass)
 
-	// attrs := &gstorage.BucketAttrs{Location: location}
-	// err = bkt.Create(ctx, projectID, attrs)
-	// if err == nil {
-	// 	log.Printf("Created Google Cloud Storage bucket %s in %s",
-	// 		bktName, location)
-	// }
-
-	// if err != nil {
-	// 	if !strings.Contains(err.Error(), "You already own this bucket") {
-	// 		return err
-	// 	}
-
-	// 	log.Printf("Using existing Google Cloud Storage bucket %v", bktName)
-	// }
-
 	gcs.bucket = bkt
 
 	return nil
@@ -102,6 +88,11 @@ func (gcs *GoogleCloudStorage) Store(ctx context.Context, filename string, data 
 	}
 
 	return nil
+}
+
+func (gcs *GoogleCloudStorage) Get(ctx context.Context, filename string) (io.ReadCloser, error) {
+	o := gcs.bucket.Object(filename)
+	return o.NewReader(ctx)
 }
 
 func (gcs *GoogleCloudStorage) Delete(ctx context.Context, filename string) error {

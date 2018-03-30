@@ -1,13 +1,17 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 
-	"github.com/lileio/lile"
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/rusenask/cloudstore"
 	"github.com/rusenask/cloudstore/server"
 	"github.com/rusenask/cloudstore/storage"
+	"github.com/rusenask/cloudstore/tls"
 
 	log "github.com/sirupsen/logrus"
 
@@ -20,7 +24,9 @@ func main() {
 
 	version := "0.1.0"
 
-	datadir := kingpin.Flag("datadir", "path to datadir for local storage (if not using google cloud buckets)").Default(filepath.Join(os.Getenv("HOME"), ".cloudstore", "data")).String()
+	datadir := kingpin.Flag("data-dir", "path to datadir for local storage (if not using google cloud buckets)").Default(filepath.Join(os.Getenv("HOME"), ".cloudstore", "data")).String()
+	grpcServerPort := kingpin.Flag("port", "grpc server port").Default("8000").String()
+	certCacheDir := kingpin.Flag("cache-dir", "cache dir").Default("/certs").String()
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(version)
 	kingpin.CommandLine.Help = "Cloudstore"
 	kingpin.Parse()
@@ -43,10 +49,26 @@ func main() {
 
 	s := server.NewCloudStorageServiceServer(store)
 
-	lile.Name("cloudstore")
-	lile.Server(func(g *grpc.Server) {
-		cloudstore.RegisterCloudStorageServiceServer(g, s)
-	})
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", *grpcServerPort))
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"port":  *grpcServerPort,
+		}).Fatal("failed to create TCP listener")
+	}
 
-	log.Fatal(lile.Serve())
+	var opts []grpc.ServerOption
+
+	if os.Getenv("AUTOCERT") == "true" {
+		opts = append(opts, tls.NewAutocert("karolis.rusenas@gmail.com", []string{"populus.webhookrelay.com"}, autocert.DirCache(*certCacheDir)))
+	}
+
+	srv := grpc.NewServer(opts...)
+
+	cloudstore.RegisterCloudStorageServiceServer(srv, s)
+
+	log.WithFields(log.Fields{
+		"port": *grpcServerPort,
+	}).Info("gRPC server starting...")
+	log.Fatal(srv.Serve(listener))
 }
