@@ -6,8 +6,9 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 	"google.golang.org/grpc"
-
 	"google.golang.org/grpc/credentials"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NewAutocert - starts
@@ -29,7 +30,9 @@ func NewAutocert(email string, domains []string, cache autocert.Cache) grpc.Serv
 		GetCertificate: certManager.GetCertificate,
 	}
 
-	go http.ListenAndServe(":http", certManager.HTTPHandler(nil))
+	log.Info("starting HTTP server on port 80")
+
+	go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 
 	return grpc.Creds(credentials.NewTLS(cfg))
 }
