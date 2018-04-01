@@ -18,7 +18,7 @@ func main() {
 	var address string
 
 	app := kingpin.New("csc", "Cloudstore client")
-	app.Flag("address", "server address").Default("localhost:8000").StringVar(&address)
+	app.Flag("address", "server address").Default("populus.webhookrelay.com:8000").StringVar(&address)
 
 	upload := app.Command("upload", "upload file to cloudstore")
 	upload.Flag("file", "path to file which to upload").Required().StringVar(&file)
@@ -34,8 +34,7 @@ func main() {
 	switch kingpin.MustParse(app.Parse(args)) {
 	case upload.FullCommand():
 		cfg := &client.ClientGRPCConfig{
-			Address:  address,
-			Compress: false,
+			Address: address,
 		}
 
 		c, err := client.New(cfg)
@@ -65,8 +64,7 @@ func main() {
 
 	case download.FullCommand():
 		cfg := &client.ClientGRPCConfig{
-			Address:  address,
-			Compress: false,
+			Address: address,
 		}
 
 		c, err := client.New(cfg)

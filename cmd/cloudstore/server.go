@@ -61,6 +61,7 @@ func main() {
 	var opts []grpc.ServerOption
 
 	if os.Getenv("AUTOCERT") == "true" {
+		log.Infof("setting up autocert")
 		opts = append(opts, tls.NewAutocert("karolis.rusenas@gmail.com", []string{"populus.webhookrelay.com"}, autocert.DirCache(*certCacheDir)))
 	}
 
