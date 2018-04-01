@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -67,8 +68,19 @@ func main() {
 
 	cloudstore.RegisterCloudStorageServiceServer(srv, s)
 
+	go startHealthHandler()
+
 	log.WithFields(log.Fields{
 		"port": *grpcServerPort,
 	}).Info("gRPC server starting...")
 	log.Fatal(srv.Serve(listener))
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "OK")
+}
+
+func startHealthHandler() {
+	http.HandleFunc("/health", handler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
