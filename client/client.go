@@ -1,11 +1,14 @@
 package client
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/rusenask/cloudstore"
@@ -30,14 +33,32 @@ type ClientGRPCConfig struct {
 
 // New - create new client
 func New(cfg *ClientGRPCConfig) (*Client, error) {
-	var (
-		grpcOpts = []grpc.DialOption{
-			grpc.WithInsecure(),
-		}
-	)
-
 	if cfg.Address == "" {
 		return nil, fmt.Errorf("address must be specified")
+	}
+
+	log.Infof("creating new client for: %s", cfg.Address)
+
+	ca, err := x509.ParseCertificate(CloudstoreCa.Certificate[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+	certPool := x509.NewCertPool()
+	certPool.AddCert(ca)
+
+	ok := certPool.AppendCertsFromPEM(CLOUDSTORE_CA)
+	if !ok {
+		log.Fatalf("failed to append certs")
+	}
+
+	transportCreds := credentials.NewTLS(&tls.Config{
+		ServerName:   cfg.Address,
+		Certificates: []tls.Certificate{CloudstoreCa},
+		RootCAs:      certPool,
+	})
+
+	var grpcOpts = []grpc.DialOption{
+		grpc.WithTransportCredentials(transportCreds),
 	}
 
 	c := &Client{}
@@ -51,11 +72,12 @@ func New(cfg *ClientGRPCConfig) (*Client, error) {
 		// ok
 	}
 
-	conn, err := grpc.Dial(cfg.Address, grpcOpts...)
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", cfg.Address, 7500), grpcOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial: %s", cfg.Address)
 	}
 
+	// c.client = cloudstore.NewCloudStorageServiceClient(conn)
 	c.client = cloudstore.NewCloudStorageServiceClient(conn)
 	c.token = cfg.Token
 	return c, nil
