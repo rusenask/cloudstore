@@ -3,22 +3,19 @@ package main
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 
-	"golang.org/x/crypto/acme/autocert"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	// "golang.org/x/crypto/acme/autocert"
 
 	"github.com/rusenask/cloudstore"
 	"github.com/rusenask/cloudstore/server"
 	"github.com/rusenask/cloudstore/storage"
-	"github.com/rusenask/cloudstore/tls"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	log "github.com/sirupsen/logrus"
-
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
-
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -26,8 +23,14 @@ func main() {
 	version := "0.1.0"
 
 	datadir := kingpin.Flag("data-dir", "path to datadir for local storage (if not using google cloud buckets)").Default(filepath.Join(os.Getenv("HOME"), ".cloudstore", "data")).String()
-	grpcServerPort := kingpin.Flag("port", "grpc server port").Default("8000").String()
-	certCacheDir := kingpin.Flag("cache-dir", "cache dir").Default("/certs").String()
+
+	certPath := kingpin.Flag("cert", "path to cert").Default(os.Getenv("CERT")).String()
+	keyPath := kingpin.Flag("key", "path to key").Default(os.Getenv("KEY")).String()
+
+	disableTLS := kingpin.Flag("no-tls", "no tls").Default("false").Bool()
+
+	grpcServerPort := kingpin.Flag("port", "grpc server port").Default("7500").String()
+	// certCacheDir := kingpin.Flag("cache-dir", "cache dir").Default("/certs").String()
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(version)
 	kingpin.CommandLine.Help = "Cloudstore"
 	kingpin.Parse()
@@ -50,38 +53,39 @@ func main() {
 
 	s := server.NewCloudStorageServiceServer(store)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", *grpcServerPort))
+	clientAddr := fmt.Sprintf("localhost:%s", *grpcServerPort)
+	listener, err := net.Listen("tcp", clientAddr)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 			"port":  *grpcServerPort,
 		}).Fatal("failed to create TCP listener")
 	}
+	defer listener.Close()
 
 	var opts []grpc.ServerOption
 
-	if os.Getenv("AUTOCERT") == "true" {
-		log.Infof("setting up autocert")
-		opts = append(opts, tls.NewAutocert("karolis.rusenas@gmail.com", []string{"populus.webhookrelay.com"}, autocert.DirCache(*certCacheDir)))
+	if *certPath != "" && *keyPath != "" && !*disableTLS {
+
+		creds, err := credentials.NewServerTLSFromFile(*certPath, *keyPath)
+		if err != nil {
+			log.Fatalf("Failed to setup tls: %v", err)
+		}
+
+		log.WithFields(log.Fields{
+			"cert": *certPath,
+		}).Info("certificates loaded")
+
+		opts = append(opts, grpc.Creds(creds))
+
 	}
 
-	srv := grpc.NewServer(opts...)
+	grpcSrv := grpc.NewServer(opts...)
 
-	cloudstore.RegisterCloudStorageServiceServer(srv, s)
+	cloudstore.RegisterCloudStorageServiceServer(grpcSrv, s)
 
 	go startHealthHandler()
 
-	log.WithFields(log.Fields{
-		"port": *grpcServerPort,
-	}).Info("gRPC server starting...")
-	log.Fatal(srv.Serve(listener))
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "OK")
-}
-
-func startHealthHandler() {
-	http.HandleFunc("/health", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Printf("gRPC Listening on %s\n", listener.Addr().String())
+	log.Fatal(grpcSrv.Serve(listener))
 }
