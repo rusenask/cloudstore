@@ -18,7 +18,8 @@ func main() {
 	var address string
 
 	app := kingpin.New("csc", "Cloudstore client")
-	app.Flag("address", "server address").Default("populus.webhookrelay.com:8000").StringVar(&address)
+	// app.Flag("address", "server address").Default("populus.webhookrelay.com:8000").StringVar(&address)
+	app.Flag("address", "server address").Default("populus.webhookrelay.com").StringVar(&address)
 
 	upload := app.Command("upload", "upload file to cloudstore")
 	upload.Flag("file", "path to file which to upload").Required().StringVar(&file)
