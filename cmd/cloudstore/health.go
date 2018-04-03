@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rusenask/cloudstore"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -13,5 +15,5 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func startHealthHandler() {
 	http.HandleFunc("/health", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cloudstore.DefaultHTTPHealthCheckPort), nil))
 }

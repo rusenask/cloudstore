@@ -1,15 +1,19 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	// "golang.org/x/crypto/acme/autocert"
 
 	"github.com/rusenask/cloudstore"
+	"github.com/rusenask/cloudstore/certs"
 	"github.com/rusenask/cloudstore/server"
 	"github.com/rusenask/cloudstore/storage"
 	"google.golang.org/grpc"
@@ -29,7 +33,7 @@ func main() {
 
 	disableTLS := kingpin.Flag("no-tls", "no tls").Default("false").Bool()
 
-	grpcServerPort := kingpin.Flag("port", "grpc server port").Default("7500").String()
+	grpcServerPort := kingpin.Flag("port", "grpc server port").Default(strconv.Itoa(cloudstore.DefaultGRPCPort)).Int()
 	// certCacheDir := kingpin.Flag("cache-dir", "cache dir").Default("/certs").String()
 	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(version)
 	kingpin.CommandLine.Help = "Cloudstore"
@@ -53,7 +57,7 @@ func main() {
 
 	s := server.NewCloudStorageServiceServer(store)
 
-	clientAddr := fmt.Sprintf("localhost:%s", *grpcServerPort)
+	clientAddr := fmt.Sprintf("localhost:%d", *grpcServerPort)
 	listener, err := net.Listen("tcp", clientAddr)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -67,10 +71,31 @@ func main() {
 
 	if *certPath != "" && *keyPath != "" && !*disableTLS {
 
-		creds, err := credentials.NewServerTLSFromFile(*certPath, *keyPath)
+		// tls mutual auth
+		certificate, err := tls.LoadX509KeyPair(
+			*certPath,
+			*keyPath,
+		)
 		if err != nil {
-			log.Fatalf("Failed to setup tls: %v", err)
+			log.Fatalf("failed to read client ca cert: %s", err)
 		}
+
+		certPool := x509.NewCertPool()
+		ok := certPool.AppendCertsFromPEM(certs.CLOUDSTORE_CA)
+		if !ok {
+			log.Fatal("failed to append client certs")
+		}
+		tlsConfig := &tls.Config{
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			Certificates: []tls.Certificate{certificate},
+			ClientCAs:    certPool,
+		}
+		creds := credentials.NewTLS(tlsConfig)
+
+		// creds, err := credentials.NewServerTLSFromFile(*certPath, *keyPath)
+		// if err != nil {
+		// 	log.Fatalf("Failed to setup tls: %v", err)
+		// }
 
 		log.WithFields(log.Fields{
 			"cert": *certPath,
