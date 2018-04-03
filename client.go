@@ -7,6 +7,9 @@ import (
 	"google.golang.org/grpc"
 )
 
+const DefaultGRPCPort = 8080
+const DefaultHTTPHealthCheckPort = 9500
+
 var (
 	cm     = &sync.Mutex{}
 	Client CloudStorageServiceClient
