@@ -57,7 +57,7 @@ func main() {
 
 	s := server.NewCloudStorageServiceServer(store)
 
-	clientAddr := fmt.Sprintf("localhost:%d", *grpcServerPort)
+	clientAddr := fmt.Sprintf(":%d", *grpcServerPort)
 	listener, err := net.Listen("tcp", clientAddr)
 	if err != nil {
 		log.WithFields(log.Fields{
