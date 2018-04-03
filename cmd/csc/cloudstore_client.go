@@ -34,7 +34,7 @@ func main() {
 	args := os.Args[1:]
 	switch kingpin.MustParse(app.Parse(args)) {
 	case upload.FullCommand():
-		cfg := &client.ClientGRPCConfig{
+		cfg := &client.Config{
 			Address: address,
 		}
 
@@ -64,7 +64,7 @@ func main() {
 		}).Info("file uploaded")
 
 	case download.FullCommand():
-		cfg := &client.ClientGRPCConfig{
+		cfg := &client.Config{
 			Address: address,
 		}
 

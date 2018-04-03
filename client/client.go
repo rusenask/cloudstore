@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Client - cloudstore client
 type Client struct {
 	address   string
 	token     string
@@ -24,8 +25,8 @@ type Client struct {
 	client    cloudstore.CloudStorageServiceClient
 }
 
-// ClientGRPCConfig - grpc config
-type ClientGRPCConfig struct {
+// Config - grpc config
+type Config struct {
 	Address   string
 	ChunkSize int
 
@@ -33,7 +34,7 @@ type ClientGRPCConfig struct {
 }
 
 // New - create new client
-func New(cfg *ClientGRPCConfig) (*Client, error) {
+func New(cfg *Config) (*Client, error) {
 	if cfg.Address == "" {
 		return nil, fmt.Errorf("address must be specified")
 	}
