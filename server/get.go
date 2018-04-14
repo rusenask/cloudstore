@@ -43,7 +43,7 @@ func (s CloudStorageServiceServer) Get(r *cloudstore.GetRequest, stream cloudsto
 			}
 			//in case it is a string file, you could check its content here...
 			if err := stream.Send(&cloudstore.Chunk{
-				Content: buf,
+				Content: buf[:v],
 			}); err != nil {
 				return err
 			}

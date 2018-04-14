@@ -158,11 +158,14 @@ func (c *Client) Get(filename string, w io.Writer) error {
 			return err
 		}
 
-		// blob = append(blob, c.Content...)
 		_, err = w.Write(c.Content)
 		if err != nil {
-			log.WithError(err).Error("failed to pass data into writer")
+			log.WithFields(log.Fields{
+				"error": err,
+				"bytes": len(c.Content),
+			}).Error("failed to pass data into writer")
 		}
+
 	}
 
 	return nil
