@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/rusenask/cloudstore"
-	"github.com/rusenask/cloudstore/certs"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -31,6 +30,9 @@ type Config struct {
 	ChunkSize int
 
 	Token string
+
+	ClientCloudstoreCert tls.Certificate
+	CloudstoreCA         []byte
 }
 
 // New - create new client
@@ -39,21 +41,21 @@ func New(cfg *Config) (*Client, error) {
 		return nil, fmt.Errorf("address must be specified")
 	}
 
-	ca, err := x509.ParseCertificate(CloudstoreCa.Certificate[0])
+	ca, err := x509.ParseCertificate(cfg.ClientCloudstoreCert.Certificate[0])
 	if err != nil {
 		log.Fatal(err)
 	}
 	certPool := x509.NewCertPool()
 	certPool.AddCert(ca)
 
-	ok := certPool.AppendCertsFromPEM(certs.CLOUDSTORE_CA)
+	ok := certPool.AppendCertsFromPEM(cfg.CloudstoreCA)
 	if !ok {
 		log.Fatalf("failed to append certs")
 	}
 
 	transportCreds := credentials.NewTLS(&tls.Config{
 		ServerName:   cfg.Address,
-		Certificates: []tls.Certificate{CloudstoreCa},
+		Certificates: []tls.Certificate{cfg.ClientCloudstoreCert},
 		RootCAs:      certPool,
 	})
 
