@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"os"
 
 	"github.com/rusenask/cloudstore/client"
@@ -34,8 +35,16 @@ func main() {
 	args := os.Args[1:]
 	switch kingpin.MustParse(app.Parse(args)) {
 	case upload.FullCommand():
+
+		cloudstoreCa, err := tls.X509KeyPair([]byte(os.Getenv("CERT")), []byte(os.Getenv("KEY")))
+		if err != nil {
+			log.Fatalf("failed to load certs: %s", err)
+		}
+
 		cfg := &client.Config{
-			Address: address,
+			Address:              address,
+			ClientCloudstoreCert: cloudstoreCa,
+			CloudstoreCA:         []byte(os.Getenv("CA")),
 		}
 
 		c, err := client.New(cfg)

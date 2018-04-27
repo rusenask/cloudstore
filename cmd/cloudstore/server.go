@@ -4,20 +4,23 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	// "golang.org/x/crypto/acme/autocert"
 
 	"github.com/rusenask/cloudstore"
-	"github.com/rusenask/cloudstore/certs"
+	// "github.com/rusenask/cloudstore/certs"
 	"github.com/rusenask/cloudstore/server"
 	"github.com/rusenask/cloudstore/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	// notification provider
+	_ "github.com/rusenask/cloudstore/pkg/notification/slack"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -30,6 +33,7 @@ func main() {
 
 	certPath := kingpin.Flag("cert", "path to cert").Default(os.Getenv("CERT")).String()
 	keyPath := kingpin.Flag("key", "path to key").Default(os.Getenv("KEY")).String()
+	caPath := kingpin.Flag("ca", "path to ca cert").Default(os.Getenv("CA")).String()
 
 	disableTLS := kingpin.Flag("no-tls", "no tls").Default("false").Bool()
 
@@ -69,7 +73,7 @@ func main() {
 
 	var opts []grpc.ServerOption
 
-	if *certPath != "" && *keyPath != "" && !*disableTLS {
+	if *certPath != "" && *keyPath != "" && *caPath != "" && !*disableTLS {
 
 		// tls mutual auth
 		certificate, err := tls.LoadX509KeyPair(
@@ -77,11 +81,16 @@ func main() {
 			*keyPath,
 		)
 		if err != nil {
+			log.Fatalf("failed to read server ca files: %s", err)
+		}
+
+		caF, err := ioutil.ReadFile(*caPath)
+		if err != nil {
 			log.Fatalf("failed to read client ca cert: %s", err)
 		}
 
 		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM(certs.CLOUDSTORE_CA)
+		ok := certPool.AppendCertsFromPEM(caF)
 		if !ok {
 			log.Fatal("failed to append client certs")
 		}
@@ -91,11 +100,6 @@ func main() {
 			ClientCAs:    certPool,
 		}
 		creds := credentials.NewTLS(tlsConfig)
-
-		// creds, err := credentials.NewServerTLSFromFile(*certPath, *keyPath)
-		// if err != nil {
-		// 	log.Fatalf("Failed to setup tls: %v", err)
-		// }
 
 		log.WithFields(log.Fields{
 			"cert": *certPath,
