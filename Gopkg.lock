@@ -120,6 +120,12 @@
   version = "v2.0.0"
 
 [[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/grpc-ecosystem/go-grpc-middleware"
   packages = ["."]
@@ -172,6 +178,12 @@
   packages = ["pbutil"]
   revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/nlopes/slack"
+  packages = ["."]
+  revision = "8ab4d0b364ef1e9af5d102531da20d5ec902b6c4"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -305,11 +317,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = [
-    "acme",
-    "acme/autocert",
-    "ssh/terminal"
-  ]
+  packages = ["ssh/terminal"]
   revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
 
 [[projects]]
@@ -469,6 +477,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c1501c05269684437fdac624c7338b09ff121416b82d13c73e41c4d575f780da"
+  inputs-digest = "130833b216dc02854e81b604c985ceefde0382d7bdc90ff8dfe8efbd80400a6b"
   solver-name = "gps-cdcl"
   solver-version = 1
